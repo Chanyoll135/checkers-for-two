@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link id="favicon" rel="icon" type="image/x-icon" href="static/favicon.ico">
+    <title>Online Checkers</title>
+    <style>
+        .flipped {
+            transform: rotate(180deg);
+        }
+
+        .flipped .square {
+            transform: rotate(180deg);
+            /* flip children back upright */
+        }
+
+        #nickname-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        #nickname-box {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.25);
+        }
+
+        #nickname-box input {
+            padding: 0.5rem;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+
+        #nickname-box button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+        }
+
+        .must-capture-marker {
+            position: absolute;
+            top: 9px;
+            left: 17px;
+            color: red;
+            font-weight: bold;
+            font-size: 26px;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .square.selected {
+            background-color: limegreen !important;
+        }
+
+        .square.threat {
+            background-color: red !important;
+        }
+
+        .square.threat {
+            background-color: red !important;
+        }
+
+        :root {
+            --dark-square: #b58863;
+            --light-square: #f0d9b5;
+            --highlight: #f6f669;
+            --piece-dark: #222;
+            --piece-light: #fff;
+            --king-ring: gold;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #eae7dc;
+            /* softer beige tone */
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .board-container {
+            position: relative;
+        }
+
+        #checkers-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: min(80vw, 500px);
+            height: min(80vw, 500px);
+            border: 10px solid #654321;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .square {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .square.dark {
+            background-color: var(--dark-square);
+        }
+
+        .square.light {
+            background-color: var(--light-square);
+        }
+
+        .square.highlight {
+            background-color: var(--highlight);
+            cursor: pointer;
+        }
+
+        .piece {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .piece:hover {
+            transform: scale(1.1);
+        }
+
+        .piece.dark {
+            background-color: var(--piece-dark);
+        }
+
+        .piece.light {
+            background-color: var(--piece-light);
+        }
+
+        .piece.king::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30%;
+            height: 30%;
+            border-radius: 50%;
+            border: 3px solid var(--king-ring);
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .player-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .player.active {
+            font-weight: bold;
+        }
+
+        .captured-pieces {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .captured-piece {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .status-message {
+            margin-top: 10px;
+            font-weight: bold;
+            min-height: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="nickname-modal" style="display: none;">
+        <div id="nickname-box">
+            <h2>Enter your nickname</h2>
+            <input type="text" id="nickname-input" placeholder="e.g., QueenSlayer">
+            <br>
+            <button>Enter</button>
+        </div>
+    </div>
+    <div id="resign-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center">
+        <div style="background:white; padding:2rem; border-radius:10px; text-align:center">
+            <p>Уверены, что хотите сдаться?</p>
+            <button id="confirm-resign">Сдаться</button>
+            <button onclick="document.getElementById('resign-modal').style.display='none'">Cancel</button>
+        </div>
+    </div>
+    <div id="endgame-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center">
+        <div style="background:white; padding:2rem; border-radius:10px; text-align:center">
+            <h2 id="endgame-message"></h2>
+            <button onclick="window.location.reload()">Play Again</button>
+        </div>
+    </div>
+    <div class="game-container">
+        <h1>Русские шашки</h1>
+        <div class="game-info">
+            <div class="player player-me" id="player-me">
+                <div class="player-indicator"></div>
+                <span id="player_name">Вы</span><span id="player_color">Dark</span>
+            </div>
+            <div class="player player-opponent" id="player-opponent">
+                <div class="player-indicator"></div>
+                <span id="opponent_name">Противник</span><span id="opponent_color">Light</span>
+            </div>
+        </div>
+        <div class="board-container">
+            <div id="checkers-board"></div>
+        </div>
+        <div class="status-message" id="status-message">Waiting for game to start...</div>
+        <div class="controls">
+            <button id="resign-btn">Сдаться</button>
+        </div>
+    </div>
+    <script src="/static/logic.js"></script>
+    <script src="/static/network.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+</body>
+</html>
